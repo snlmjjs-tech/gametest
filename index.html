@@ -12,6 +12,7 @@
        botón "Conexión" dentro del juego.
      ============================================================ -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.14.1/firebase-app-compat.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.14.1/firebase-database-compat.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -208,6 +209,10 @@ label.fld{display:block;font-weight:800;font-size:.85rem;color:var(--ink-dim);ma
 /* ===== video de YouTube ===== */
 .ytwrap{position:relative;width:min(680px,100%);margin:14px auto 0;padding-top:min(56.25%,382px);border-radius:16px;overflow:hidden;box-shadow:0 12px 28px rgba(0,0,0,.4)}
 .ytwrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+/* ===== QR del lobby ===== */
+.qr-hero{background:#fff;color:#22104f;border-radius:26px;padding:20px 22px 14px;display:flex;flex-direction:column;align-items:center;gap:10px;box-shadow:0 16px 40px rgba(0,0,0,.35)}
+.qr-hero .lbl{font-weight:800;letter-spacing:2px;font-size:.85rem;color:#6b5aa8;text-transform:uppercase}
+.qr-hero img,.qr-hero canvas{border-radius:8px}
 @media(max-width:640px){
   .ans-grid{grid-template-columns:1fr}
   .ans{min-height:76px}
@@ -285,7 +290,10 @@ label.fld{display:block;font-weight:800;font-size:.85rem;color:var(--ink-dim);ma
   <div class="center-col">
     <h2 class="display" style="font-size:2rem" id="lobbyTitle">Mi Quiz</h2>
     <p class="muted" style="font-weight:700">Entra en esta misma página, toca <b style="color:#fff">“Soy Estudiante”</b> y usa el PIN:</p>
-    <div class="pin-hero"><div class="lbl">PIN del juego</div><div class="pin" id="pinShow">000000</div></div>
+    <div class="row" style="justify-content:center;align-items:stretch">
+      <div class="pin-hero"><div class="lbl">PIN del juego</div><div class="pin" id="pinShow">000000</div></div>
+      <div class="qr-hero" id="qrHero"><div id="qrBox"></div><div class="lbl">📱 Escanea y entra</div></div>
+    </div>
     <h3 id="playerCount" class="display">0 jugadores conectados</h3>
     <div class="players-wrap" id="playersWrap"></div>
     <div class="row">
@@ -865,6 +873,14 @@ function startLive(){
     $('#pinShow').textContent=state.pin;
     $('#pinSmall').textContent=state.pin;
     $('#lobbyTitle').textContent=$('#quizTitle').value.trim()||'Quiz';
+    // QR con el link de la página + PIN incluido
+    const qb=$('#qrBox'); qb.innerHTML=''; $('#qrHero').style.display='';
+    try{
+      if(typeof QRCode!=='undefined'&&location.protocol.indexOf('http')===0){
+        const url=location.origin+location.pathname+'?pin='+state.pin;
+        new QRCode(qb,{text:url,width:170,height:170,colorDark:'#22104f',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
+      } else { $('#qrHero').style.display='none'; }
+    }catch(e){ $('#qrHero').style.display='none'; }
     listen(state.gameRef.child('players'),'value',snap=>{
       state.players=snap.val()||{};
       const arr=Object.values(state.players);
@@ -1244,6 +1260,9 @@ function localReveal(){
     ag.querySelectorAll('.av').forEach(x=>x.classList.toggle('sel',x===b));
     sfx.click();
   });
+  // entrada directa por QR: la URL trae ?pin=123456
+  const urlPin=new URLSearchParams(location.search).get('pin');
+  if(urlPin&&/^\d{6}$/.test(urlPin)){ $('#joinPin').value=urlPin; go('scr-join'); setTimeout(()=>$('#joinName').focus(),300); }
   const c=loadSavedConfig();
   if(c) initFB(c);
   else $('#fbStatus').innerHTML='⚪ Modo en vivo sin configurar — toca ⚙️ Conexión (solo el profesor, una vez)';
